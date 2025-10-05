@@ -192,6 +192,12 @@ export default function ViewTrip() {
 
   const sortedDates = Object.keys(activitiesByDate).sort();
 
+  const formatDateHeader = (dateString: string) => {
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
@@ -212,7 +218,13 @@ export default function ViewTrip() {
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <Calendar className="h-5 w-5" />
                     <span data-testid="text-dates">
-                      {new Date(trip.startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} - {new Date(trip.endDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      {(() => {
+                        const [startYear, startMonth, startDay] = trip.startDate.split('-').map(Number);
+                        const [endYear, endMonth, endDay] = trip.endDate.split('-').map(Number);
+                        const startDate = new Date(startYear, startMonth - 1, startDay);
+                        const endDate = new Date(endYear, endMonth - 1, endDay);
+                        return `${startDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+                      })()}
                     </span>
                   </div>
                 </div>
@@ -360,7 +372,7 @@ export default function ViewTrip() {
               {sortedDates.map((date) => (
                 <div key={date}>
                   <h2 className="text-2xl font-semibold mb-4" data-testid={`text-date-header-${date}`}>
-                    {new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                    {formatDateHeader(date)}
                   </h2>
                   <div className="space-y-3">
                     {activitiesByDate[date].map((activity) => (
