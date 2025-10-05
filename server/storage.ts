@@ -1,5 +1,6 @@
-import { type Trip, type InsertTrip, type Activity, type InsertActivity } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { type Trip, type InsertTrip, type Activity, type InsertActivity, trips, activities } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   createTrip(trip: InsertTrip): Promise<Trip>;
@@ -11,82 +12,60 @@ export interface IStorage {
   deleteActivity(id: string): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
-  private trips: Map<string, Trip>;
-  private activities: Map<string, Activity>;
-
-  constructor() {
-    this.trips = new Map();
-    this.activities = new Map();
-  }
-
+export class DatabaseStorage implements IStorage {
   async createTrip(insertTrip: InsertTrip): Promise<Trip> {
-    const id = randomUUID();
-    const trip: Trip = { 
-      ...insertTrip, 
-      id,
-      description: insertTrip.description ?? null 
-    };
-    this.trips.set(id, trip);
+    const [trip] = await db
+      .insert(trips)
+      .values(insertTrip)
+      .returning();
     return trip;
   }
 
   async getTrip(id: string): Promise<Trip | undefined> {
-    return this.trips.get(id);
+    const [trip] = await db.select().from(trips).where(eq(trips.id, id));
+    return trip || undefined;
   }
 
   async updateTrip(id: string, updates: Partial<InsertTrip>): Promise<Trip | undefined> {
-    const trip = this.trips.get(id);
-    if (!trip) return undefined;
-    
-    const updatedTrip: Trip = {
-      ...trip,
-      ...updates,
-      id,
-      description: updates.description !== undefined ? (updates.description ?? null) : trip.description,
-    };
-    
-    this.trips.set(id, updatedTrip);
-    return updatedTrip;
+    const [trip] = await db
+      .update(trips)
+      .set(updates)
+      .where(eq(trips.id, id))
+      .returning();
+    return trip || undefined;
   }
 
   async createActivity(insertActivity: InsertActivity): Promise<Activity> {
-    const id = randomUUID();
-    const activity: Activity = { 
-      ...insertActivity, 
-      id,
-      description: insertActivity.description ?? null,
-      location: insertActivity.location ?? null
-    };
-    this.activities.set(id, activity);
+    const [activity] = await db
+      .insert(activities)
+      .values(insertActivity)
+      .returning();
     return activity;
   }
 
   async getActivitiesByTripId(tripId: string): Promise<Activity[]> {
-    return Array.from(this.activities.values()).filter(
-      (activity) => activity.tripId === tripId,
-    );
+    return await db
+      .select()
+      .from(activities)
+      .where(eq(activities.tripId, tripId));
   }
 
   async updateActivity(id: string, updates: Partial<InsertActivity>): Promise<Activity | undefined> {
-    const activity = this.activities.get(id);
-    if (!activity) return undefined;
-    
-    const updatedActivity: Activity = {
-      ...activity,
-      ...updates,
-      id,
-      description: updates.description !== undefined ? (updates.description ?? null) : activity.description,
-      location: updates.location !== undefined ? (updates.location ?? null) : activity.location,
-    };
-    
-    this.activities.set(id, updatedActivity);
-    return updatedActivity;
+    const [activity] = await db
+      .update(activities)
+      .set(updates)
+      .where(eq(activities.id, id))
+      .returning();
+    return activity || undefined;
   }
 
   async deleteActivity(id: string): Promise<boolean> {
-    return this.activities.delete(id);
+    const result = await db
+      .delete(activities)
+      .where(eq(activities.id, id))
+      .returning();
+    return result.length > 0;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
