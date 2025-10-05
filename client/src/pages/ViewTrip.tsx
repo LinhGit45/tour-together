@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Calendar, MapPin, Share2, Check, Plus, Pencil, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Trip, Activity } from "@shared/schema";
+import { linkify } from "@/lib/linkify";
 
 export default function ViewTrip() {
   const [, params] = useRoute("/trip/:id");
@@ -401,7 +402,7 @@ export default function ViewTrip() {
                   </div>
                   {trip.description && (
                     <p className="text-muted-foreground" data-testid="text-description">
-                      {trip.description}
+                      {linkify(trip.description)}
                     </p>
                   )}
                 </>

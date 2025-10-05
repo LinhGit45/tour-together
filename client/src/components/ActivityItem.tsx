@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Clock, MapPin } from "lucide-react";
+import { linkify } from "@/lib/linkify";
 
 interface ActivityItemProps {
   id: string;
@@ -27,7 +28,7 @@ export default function ActivityItem({ id, time, title, location, description }:
             )}
             {description && (
               <p className="text-sm text-muted-foreground" data-testid={`text-description-${id}`}>
-                {description}
+                {linkify(description)}
               </p>
             )}
           </div>
