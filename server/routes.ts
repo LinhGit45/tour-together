@@ -46,6 +46,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/trips/:tripId/activities", async (req, res) => {
+    try {
+      const { tripId } = req.params;
+      const trip = await storage.getTrip(tripId);
+      
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+      
+      const validatedActivity = insertActivitySchema.parse({
+        ...req.body,
+        tripId,
+      });
+      
+      const activity = await storage.createActivity(validatedActivity);
+      res.json(activity);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/activities/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const activity = await storage.updateActivity(id, updates);
+      
+      if (!activity) {
+        return res.status(404).json({ error: "Activity not found" });
+      }
+      
+      res.json(activity);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/activities/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteActivity(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Activity not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

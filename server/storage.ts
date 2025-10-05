@@ -6,6 +6,8 @@ export interface IStorage {
   getTrip(id: string): Promise<Trip | undefined>;
   createActivity(activity: InsertActivity): Promise<Activity>;
   getActivitiesByTripId(tripId: string): Promise<Activity[]>;
+  updateActivity(id: string, activity: Partial<InsertActivity>): Promise<Activity | undefined>;
+  deleteActivity(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -48,6 +50,26 @@ export class MemStorage implements IStorage {
     return Array.from(this.activities.values()).filter(
       (activity) => activity.tripId === tripId,
     );
+  }
+
+  async updateActivity(id: string, updates: Partial<InsertActivity>): Promise<Activity | undefined> {
+    const activity = this.activities.get(id);
+    if (!activity) return undefined;
+    
+    const updatedActivity: Activity = {
+      ...activity,
+      ...updates,
+      id,
+      description: updates.description !== undefined ? (updates.description ?? null) : activity.description,
+      location: updates.location !== undefined ? (updates.location ?? null) : activity.location,
+    };
+    
+    this.activities.set(id, updatedActivity);
+    return updatedActivity;
+  }
+
+  async deleteActivity(id: string): Promise<boolean> {
+    return this.activities.delete(id);
   }
 }
 

@@ -2,18 +2,33 @@ import { useState, useEffect } from "react";
 import { useRoute } from "wouter";
 import Header from "@/components/Header";
 import ActivityItem from "@/components/ActivityItem";
+import EditableActivityItem from "@/components/EditableActivityItem";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, MapPin, Share2, Check } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Calendar, MapPin, Share2, Check, Plus, Pencil } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import type { Trip, Activity } from "@shared/schema";
 
 export default function ViewTrip() {
   const [, params] = useRoute("/trip/:id");
+  const { toast } = useToast();
   const [copied, setCopied] = useState(false);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isAddingActivity, setIsAddingActivity] = useState(false);
+  const [newActivity, setNewActivity] = useState({
+    date: "",
+    time: "09:00",
+    title: "",
+    location: "",
+    description: "",
+  });
 
   useEffect(() => {
     const fetchTrip = async () => {
@@ -42,6 +57,100 @@ export default function ViewTrip() {
     navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleUpdateActivity = async (id: string, updates: Partial<Activity>) => {
+    try {
+      const response = await fetch(`/api/activities/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update activity');
+      }
+
+      const updatedActivity = await response.json();
+      setActivities(activities.map(a => a.id === id ? updatedActivity : a));
+      toast({
+        title: "Activity updated",
+        description: "Changes saved successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update activity. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteActivity = async (id: string) => {
+    try {
+      const response = await fetch(`/api/activities/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete activity');
+      }
+
+      setActivities(activities.filter(a => a.id !== id));
+      toast({
+        title: "Activity deleted",
+        description: "Activity removed successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete activity. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddActivity = async () => {
+    if (!trip || !newActivity.title) return;
+
+    try {
+      const response = await fetch(`/api/trips/${trip.id}/activities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: newActivity.date || trip.startDate,
+          time: newActivity.time,
+          title: newActivity.title,
+          location: newActivity.location || undefined,
+          description: newActivity.description || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add activity');
+      }
+
+      const activity = await response.json();
+      setActivities([...activities, activity]);
+      setNewActivity({
+        date: "",
+        time: "09:00",
+        title: "",
+        location: "",
+        description: "",
+      });
+      setIsAddingActivity(false);
+      toast({
+        title: "Activity added",
+        description: "New activity created successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add activity. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -107,19 +216,29 @@ export default function ViewTrip() {
                     </span>
                   </div>
                 </div>
-                <Button onClick={handleShare} data-testid="button-share">
-                  {copied ? (
-                    <>
-                      <Check className="h-4 w-4 mr-2" />
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Share2 className="h-4 w-4 mr-2" />
-                      Share Trip
-                    </>
-                  )}
-                </Button>
+                <div className="flex gap-2 flex-wrap">
+                  <Button 
+                    variant={isEditMode ? "default" : "outline"}
+                    onClick={() => setIsEditMode(!isEditMode)} 
+                    data-testid="button-toggle-edit"
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    {isEditMode ? "Done Editing" : "Edit Activities"}
+                  </Button>
+                  <Button onClick={handleShare} variant="outline" data-testid="button-share">
+                    {copied ? (
+                      <>
+                        <Check className="h-4 w-4 mr-2" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Share
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
               {trip.description && (
                 <p className="text-muted-foreground" data-testid="text-description">
@@ -129,10 +248,111 @@ export default function ViewTrip() {
             </CardContent>
           </Card>
 
+          {isEditMode && (
+            <Card className="mb-6">
+              <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+                <CardTitle>Add New Activity</CardTitle>
+                {!isAddingActivity && (
+                  <Button onClick={() => setIsAddingActivity(true)} size="sm" data-testid="button-show-add-activity">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Activity
+                  </Button>
+                )}
+              </CardHeader>
+              {isAddingActivity && (
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Date</Label>
+                      <Input
+                        type="date"
+                        value={newActivity.date || trip.startDate}
+                        onChange={(e) => setNewActivity({ ...newActivity, date: e.target.value })}
+                        data-testid="input-new-activity-date"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Time</Label>
+                      <Input
+                        type="time"
+                        value={newActivity.time}
+                        onChange={(e) => setNewActivity({ ...newActivity, time: e.target.value })}
+                        data-testid="input-new-activity-time"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Activity Title</Label>
+                    <Input
+                      value={newActivity.title}
+                      onChange={(e) => setNewActivity({ ...newActivity, title: e.target.value })}
+                      placeholder="e.g., Visit Museum"
+                      data-testid="input-new-activity-title"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Location (Optional)</Label>
+                    <Input
+                      value={newActivity.location}
+                      onChange={(e) => setNewActivity({ ...newActivity, location: e.target.value })}
+                      placeholder="e.g., Downtown"
+                      data-testid="input-new-activity-location"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Description (Optional)</Label>
+                    <Textarea
+                      value={newActivity.description}
+                      onChange={(e) => setNewActivity({ ...newActivity, description: e.target.value })}
+                      placeholder="Add notes..."
+                      rows={2}
+                      data-testid="input-new-activity-description"
+                    />
+                  </div>
+                  
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsAddingActivity(false);
+                        setNewActivity({
+                          date: "",
+                          time: "09:00",
+                          title: "",
+                          location: "",
+                          description: "",
+                        });
+                      }}
+                      data-testid="button-cancel-add-activity"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleAddActivity}
+                      disabled={!newActivity.title}
+                      data-testid="button-save-new-activity"
+                    >
+                      Add Activity
+                    </Button>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          )}
+
           {activities.length === 0 ? (
             <Card>
               <CardContent className="pt-6 text-center py-12">
                 <p className="text-muted-foreground">No activities planned yet.</p>
+                {isEditMode && (
+                  <Button onClick={() => setIsAddingActivity(true)} className="mt-4" data-testid="button-add-first-activity">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Your First Activity
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ) : (
@@ -144,14 +364,28 @@ export default function ViewTrip() {
                   </h2>
                   <div className="space-y-3">
                     {activitiesByDate[date].map((activity) => (
-                      <ActivityItem
-                        key={activity.id}
-                        id={activity.id}
-                        time={activity.time}
-                        title={activity.title}
-                        location={activity.location ?? undefined}
-                        description={activity.description ?? undefined}
-                      />
+                      isEditMode ? (
+                        <EditableActivityItem
+                          key={activity.id}
+                          id={activity.id}
+                          time={activity.time}
+                          title={activity.title}
+                          date={activity.date}
+                          location={activity.location ?? undefined}
+                          description={activity.description ?? undefined}
+                          onUpdate={handleUpdateActivity}
+                          onDelete={handleDeleteActivity}
+                        />
+                      ) : (
+                        <ActivityItem
+                          key={activity.id}
+                          id={activity.id}
+                          time={activity.time}
+                          title={activity.title}
+                          location={activity.location ?? undefined}
+                          description={activity.description ?? undefined}
+                        />
+                      )
                     ))}
                   </div>
                 </div>
