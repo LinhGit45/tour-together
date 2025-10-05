@@ -46,6 +46,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/trips/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const trip = await storage.updateTrip(id, updates);
+      
+      if (!trip) {
+        return res.status(404).json({ error: "Trip not found" });
+      }
+      
+      res.json(trip);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   app.post("/api/trips/:tripId/activities", async (req, res) => {
     try {
       const { tripId } = req.params;

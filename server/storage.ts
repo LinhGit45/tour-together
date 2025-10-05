@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 export interface IStorage {
   createTrip(trip: InsertTrip): Promise<Trip>;
   getTrip(id: string): Promise<Trip | undefined>;
+  updateTrip(id: string, trip: Partial<InsertTrip>): Promise<Trip | undefined>;
   createActivity(activity: InsertActivity): Promise<Activity>;
   getActivitiesByTripId(tripId: string): Promise<Activity[]>;
   updateActivity(id: string, activity: Partial<InsertActivity>): Promise<Activity | undefined>;
@@ -32,6 +33,21 @@ export class MemStorage implements IStorage {
 
   async getTrip(id: string): Promise<Trip | undefined> {
     return this.trips.get(id);
+  }
+
+  async updateTrip(id: string, updates: Partial<InsertTrip>): Promise<Trip | undefined> {
+    const trip = this.trips.get(id);
+    if (!trip) return undefined;
+    
+    const updatedTrip: Trip = {
+      ...trip,
+      ...updates,
+      id,
+      description: updates.description !== undefined ? (updates.description ?? null) : trip.description,
+    };
+    
+    this.trips.set(id, updatedTrip);
+    return updatedTrip;
   }
 
   async createActivity(insertActivity: InsertActivity): Promise<Activity> {
