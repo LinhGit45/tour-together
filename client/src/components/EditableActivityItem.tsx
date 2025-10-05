@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { MapPin, Pencil, Trash2, Check, X } from "lucide-react";
-import { linkify } from "@/lib/linkify";
+import { linkify, renderHtml } from "@/lib/linkify";
 
 interface EditableActivityItemProps {
   id: string;
@@ -156,9 +156,9 @@ export default function EditableActivityItem({
               </div>
             )}
             {description && (
-              <p className="text-sm text-muted-foreground" data-testid={`text-description-${id}`}>
-                {linkify(description)}
-              </p>
+              <div className="text-sm text-muted-foreground" data-testid={`text-description-${id}`}>
+                {renderHtml(linkify(description))}
+              </div>
             )}
           </div>
           <div className="flex gap-1">
