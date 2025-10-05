@@ -401,7 +401,7 @@ export default function ViewTrip() {
                     </div>
                   </div>
                   {trip.description && (
-                    <div className="text-muted-foreground" data-testid="text-description">
+                    <div className="text-muted-foreground break-words overflow-wrap-anywhere" data-testid="text-description">
                       {renderHtml(linkify(trip.description))}
                     </div>
                   )}

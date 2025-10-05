@@ -156,7 +156,7 @@ export default function EditableActivityItem({
               </div>
             )}
             {description && (
-              <div className="text-sm text-muted-foreground" data-testid={`text-description-${id}`}>
+              <div className="text-sm text-muted-foreground break-words overflow-wrap-anywhere" data-testid={`text-description-${id}`}>
                 {renderHtml(linkify(description))}
               </div>
             )}

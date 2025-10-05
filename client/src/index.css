@@ -242,6 +242,11 @@
   }
 }
 
+.overflow-wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 /**
  * Using the elevate system.
  * Automatic contrast adjustment.
