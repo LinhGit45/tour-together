@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertTripSchema, insertActivitySchema } from "@shared/schema";
+import { getUserInfo, createRepository } from "./github";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/trips", async (req, res) => {
@@ -111,6 +112,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/github/user", async (req, res) => {
+    try {
+      const userInfo = await getUserInfo();
+      res.json(userInfo);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/github/create-repo", async (req, res) => {
+    try {
+      const { name, description, isPrivate } = req.body;
+      const result = await createRepository(name, description, isPrivate);
+      res.json(result);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
