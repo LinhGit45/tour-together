@@ -5,8 +5,8 @@ interface ActivityItemProps {
   id: string;
   time: string;
   title: string;
-  location?: string;
-  description?: string;
+  location?: string | null;
+  description?: string | null;
 }
 
 export default function ActivityItem({ id, time, title, location, description }: ActivityItemProps) {

@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Plus, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface Activity {
   id: string;
@@ -19,12 +20,14 @@ interface Activity {
 
 export default function CreateTrip() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [tripName, setTripName] = useState("");
   const [destination, setDestination] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [description, setDescription] = useState("");
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const addActivity = () => {
     const newActivity: Activity = {
@@ -48,12 +51,55 @@ export default function CreateTrip() {
     ));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: remove mock functionality
-    const tripId = Math.random().toString(36).substr(2, 9);
-    console.log('Creating trip:', { tripName, destination, startDate, endDate, description, activities });
-    setLocation(`/trip/${tripId}`);
+    
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch('/api/trips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trip: {
+            name: tripName,
+            destination,
+            startDate,
+            endDate,
+            description: description || undefined,
+          },
+          activities: activities.map(a => ({
+            date: a.date,
+            time: a.time,
+            title: a.title,
+            location: a.location || undefined,
+            description: a.description || undefined,
+          })),
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to create trip');
+      }
+      
+      const { trip } = await response.json();
+      toast({
+        title: "Trip created!",
+        description: "Your trip has been created successfully.",
+      });
+      setLocation(`/trip/${trip.id}`);
+    } catch (error) {
+      console.error('Error creating trip:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create trip. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -239,9 +285,10 @@ export default function CreateTrip() {
               </Button>
               <Button 
                 type="submit"
+                disabled={isSubmitting}
                 data-testid="button-submit-trip"
               >
-                Create Trip
+                {isSubmitting ? "Creating..." : "Create Trip"}
               </Button>
             </div>
           </form>
